@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Text Extractor</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #ffe0b2, #ffcc80);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 700px;
+            background: #fff9c4;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            text-align: center;
+        }
+
+        h1 {
+            margin-bottom: 25px;
+            font-size: 34px;
+            color: #333;
+        }
+
+        h2 {
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        input[type="file"] {
+            margin-top: 15px;
+            margin-bottom: 20px;
+            padding: 12px;
+            width: 100%;
+            border: 2px solid #fdd835;
+            border-radius: 10px;
+            background: white;
+            font-size: 16px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 350px;
+            padding: 15px;
+            border: 2px solid #fdd835;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            outline: none;
+            background: white;
+            white-space: pre-wrap;
+            line-height: 1.5;
+        }
+
+        textarea:focus {
+            border-color: #f9a825;
+            box-shadow: 0 0 8px rgba(249, 168, 37, 0.3);
+        }
+
+        .copy-button,
+        .clear-button {
+            padding: 12px 18px;
+            margin-top: 15px;
+            margin-right: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .copy-button {
+            background: #1e88e5;
+            color: white;
+        }
+
+        .copy-button:hover {
+            background: #1565c0;
+        }
+
+        .clear-button {
+            background: #e53935;
+            color: white;
+        }
+
+        .clear-button:hover {
+            background: #c62828;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        @media (max-width: 600px) {
+            h1 { font-size: 28px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🖼️ Image Text Extractor</h1>
+
+    <h2>Select Image File</h2>
+    <input type="file" id="imageInput" accept="image/*">
+
+    <div id="status"></div>
+
+    <h2>View Text</h2>
+    <textarea id="output" placeholder="Extracted image text will appear here..." readonly></textarea>
+
+    <br>
+    <button class="copy-button" onclick="copyText()">Copy Text</button>
+    <button class="clear-button" onclick="clearText()">Clear</button>
+</div>
+
+<script>
+    document.getElementById('imageInput').addEventListener('change', handleImageSelect, false);
+
+    async function handleImageSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const status = document.getElementById('status');
+        const reader = new FileReader();
+
+        reader.onload = async function(e) {
+            try {
+                status.textContent = 'Extracting text from image... Please wait.';
+
+                const result = await Tesseract.recognize(
+                    e.target.result,
+                    'eng',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                status.textContent = `Processing: ${Math.round(m.progress * 100)}%`;
+                            }
+                        }
+                    }
+                );
+
+                const extractedText = result.data.text.trim();
+
+                document.getElementById('output').value = extractedText;
+                localStorage.setItem('imageExtractedText', extractedText);
+
+                status.textContent = 'Image text extracted successfully!';
+            } catch (error) {
+                console.error('Error extracting image text:', error);
+                status.textContent = 'Error extracting image text.';
+            }
+        };
+
+        reader.readAsDataURL(file);
+    }
+
+    function copyText() {
+        const output = document.getElementById('output');
+
+        if (!output.value.trim()) {
+            alert('No text available to copy!');
+            return;
+        }
+
+        output.select();
+        document.execCommand('copy');
+
+        alert('Text copied successfully!');
+    }
+
+    function clearText() {
+        document.getElementById('imageInput').value = '';
+        document.getElementById('output').value = '';
+        document.getElementById('status').textContent = '';
+        localStorage.removeItem('imageExtractedText');
+    }
+
+    function loadSavedText() {
+        const savedText = localStorage.getItem('imageExtractedText');
+        if (savedText) {
+            document.getElementById('output').value = savedText;
+        }
+    }
+
+    window.onload = loadSavedText;
+</script>
+
+</body>
+</html>
